@@ -17,7 +17,7 @@ MONTHLY_GOAL = 5000
 DATA_FILE = "data.json"
 
 genai.configure(api_key=GEMINI_API_KEY)
-ai_model = genai.GenerativeModel("gemini-1.0-pro")
+ai_model = genai.GenerativeModel("gemini-2.5-flash-preview-04-17")
 
 def load_data():
     if os.path.exists(DATA_FILE):
