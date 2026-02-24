@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from datetime import datetime, timedelta
-import google.generativeai as genai
+from groq import Groq
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
@@ -12,12 +12,26 @@ from telegram.ext import (
 logging.basicConfig(level=logging.INFO)
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 MONTHLY_GOAL = 5000
 DATA_FILE = "data.json"
 
-genai.configure(api_key=GEMINI_API_KEY, client_options={"api_endpoint": "generativelanguage.googleapis.com"})
-ai_model = genai.GenerativeModel("gemini-1.5-flash-latest")
+groq_client = Groq(api_key=GROQ_API_KEY)
+
+def ask_ai(prompt, system="You are a helpful assistant for an AI automation agency owner trying to earn $5k/month. Be concise and practical. Reply in Bengali or English based on user's language."):
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=1000
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as f:
@@ -27,13 +41,6 @@ def load_data():
 def save_data(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
-
-def ask_gemini(prompt):
-    try:
-        response = ai_model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        return f"❌ Error: {str(e)}"
 
 def get_bar(income):
     progress = min((income / MONTHLY_GOAL) * 100, 100)
@@ -52,7 +59,7 @@ def main_keyboard():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🤖 *তোমার Personal Assistant*\n\nকী করতে চাও?",
+        "🤖 *Chitti - তোমার Personal Assistant*\n\nকী করতে চাও?",
         reply_markup=main_keyboard(), parse_mode="Markdown"
     )
 
@@ -63,7 +70,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     back = lambda cb: InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data=cb)]])
 
     if d == "back_main":
-        await q.edit_message_text("🤖 *তোমার Personal Assistant*\n\nকী করতে চাও?",
+        await q.edit_message_text("🤖 *Chitti - তোমার Personal Assistant*\n\nকী করতে চাও?",
                                    reply_markup=main_keyboard(), parse_mode="Markdown")
 
     elif d == "menu_clients":
@@ -164,7 +171,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif d == "menu_content":
         await q.edit_message_text(
-            "✍️ *AI Content (FREE)*\n\n`/post topic`\n`/email purpose`\n`/proposal service`\n`/caption topic`",
+            "✍️ *AI Content*\n\n`/post topic`\n`/email purpose`\n`/proposal service`\n`/caption topic`",
             reply_markup=back("back_main"), parse_mode="Markdown")
 
     elif d == "menu_reminders":
@@ -276,7 +283,7 @@ async def generate(update: Update, context: ContextTypes.DEFAULT_TYPE, ctype: st
         "proposal": f"Write a service proposal for AI automation agency about: {topic}.",
         "caption": f"Write 3 social media captions for: {topic}. Add hashtags."
     }
-    result = ask_gemini(prompts.get(ctype, f"Write about: {topic}"))
+    result = ask_ai(prompts.get(ctype, f"Write about: {topic}"))
     if len(result) > 4000: result = result[:3900] + "..."
     await msg.edit_text(f"✍️ *Generated:*\n\n{result}", parse_mode="Markdown")
 
@@ -286,16 +293,11 @@ async def cmd_proposal(u, c): await generate(u, c, "proposal")
 async def cmd_caption(u, c): await generate(u, c, "caption")
 
 async def remind_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("⏰ Reminder feature:\n`/remind 30 Call client` — 30 মিনিট পরে remind করবো", parse_mode="Markdown")
+    await update.message.reply_text("⏰ `/remind 30 Call client` — 30 মিনিট পরে remind করবো", parse_mode="Markdown")
 
 async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("🤔 ভাবছি...")
-    prompt = (
-        "You are a helpful assistant for an AI automation agency owner trying to earn $5k/month. "
-        "Be concise and practical. Reply in Bengali or English based on user's language.\n\n"
-        f"User: {update.message.text}"
-    )
-    result = ask_gemini(prompt)
+    result = ask_ai(update.message.text)
     if len(result) > 4000: result = result[:3900] + "..."
     await msg.edit_text(result)
 
@@ -316,7 +318,7 @@ def main():
     app.add_handler(CommandHandler("caption", cmd_caption))
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai_chat))
-    print("🤖 Bot চালু!")
+    print("🤖 Chitti চালু!")
     app.run_polling()
 
 if __name__ == "__main__":
