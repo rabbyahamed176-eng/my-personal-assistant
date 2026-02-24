@@ -16,9 +16,8 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 MONTHLY_GOAL = 5000
 DATA_FILE = "data.json"
 
-genai.configure(api_key=GEMINI_API_KEY)
-ai_model = genai.GenerativeModel("gemini-1.5-flash-8b")
-
+genai.configure(api_key=GEMINI_API_KEY, client_options={"api_endpoint": "generativelanguage.googleapis.com"})
+ai_model = genai.GenerativeModel("gemini-1.5-flash-latest")
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as f:
