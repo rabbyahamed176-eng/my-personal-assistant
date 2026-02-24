@@ -21,7 +21,7 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 def ask_ai(prompt, system="You are a helpful assistant for an AI automation agency owner trying to earn $5k/month. Be concise and practical. Reply in Bengali or English based on user's language."):
     try:
         response = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile"
+            model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": prompt}
